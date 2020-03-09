@@ -74,76 +74,67 @@ const (
 	BGC_LIGHTWHITE   = 107
 )
 
-type Color struct {
+type color struct {
 	attributes []int
-	preCrAttrs []int
+	colorChan  *color
 }
 
-func (this *Color) setAttributes(attrs []int) {
-	this.attributes = attrs
+func (c *color) isEmpty() bool {
+	return len(c.attributes) == 0 ||
+		c.colorChan == nil || c.colorChan.isEmpty()
 }
 
-func (this *Color) setPreCrAttrs(attrs []int) {
-	this.preCrAttrs = attrs
+func (c *color) setAttrs(attrs []int) {
+	c.attributes = attrs
 }
 
-func (this *Color) empty() bool {
-	return len(this.preCrAttrs) <= 0 && len(this.attributes) <= 0
+func (c *color) linkTo(preChan *color) {
+	c.colorChan = preChan
 }
 
-func (this *Color) writeH(writer io.Writer, beforeLen int, selfList []int) {
-	if writer == nil || len(selfList) <= 0 {
+func (c *color) writeHead(writer io.Writer) {
+	if writer == nil {
 		return
 	}
 
-	start := 0
-
-	if beforeLen <= 0 {
-		fmt.Fprintf(writer, "%d", selfList[0])
-		start = 1
+	if c.colorChan != nil {
+		c.colorChan.writeHead(writer)
 	}
 
-	for ; start < len(selfList); start++ {
-		fmt.Fprintf(writer, ";%d", selfList[start])
+	if len(c.attributes) == 0 {
+		return
+	}
+
+	fmt.Fprintf(writer, "%d", c.attributes[0])
+
+	for i := 1; i < len(c.attributes); i++ {
+		fmt.Fprintf(writer, ";%d", c.attributes[i])
 	}
 }
 
-func (this *Color) writeE(writer io.Writer, beforeLen int) {
-	if writer == nil || beforeLen <= 0 {
+func (c *color) writeTail(writer io.Writer) {
+	if writer == nil {
 		return
 	}
 
 	fmt.Fprintf(writer, "\x1b[%dm", FMT_RESET)
 }
 
-func (this *Color) setFormat(writer io.Writer) {
-	if writer == nil || this.empty() {
+func (c *color) start(writer io.Writer) {
+	if writer == nil || c.isEmpty() {
 		return
 	}
-
-	l := len(this.preCrAttrs)
-	this.writeE(writer, l)
 
 	fmt.Fprintf(writer, "\x1b[")
 	defer fmt.Fprintf(writer, "m")
 
-	this.writeH(writer, 0, this.preCrAttrs)
-	this.writeH(writer, l, this.attributes)
+	c.writeHead(writer)
 }
 
-func (this *Color) end(writer io.Writer) {
-	if writer == nil || this.empty() {
+func (c *color) end(writer io.Writer) {
+	if writer == nil || c.isEmpty() {
 		return
 	}
 
-	this.writeE(writer, 1)
-
-	if len(this.preCrAttrs) <= 0 {
-		return
-	}
-
-	fmt.Fprintf(writer, "\x1b[")
-	defer fmt.Fprintf(writer, "m")
-
-	this.writeH(writer, 0, this.preCrAttrs)
+	c.writeTail(writer)
 }

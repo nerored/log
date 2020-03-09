@@ -28,34 +28,32 @@ import (
 )
 
 type Combo struct {
+	color
 	data interface{}
-	Color
 }
 
 func NewCombo(data interface{}, attrs ...int) (c *Combo) {
-	c = &Combo{
-		data: data,
-	}
-	c.setAttributes(attrs)
+	c = new(Combo)
+	c.data = data
+	c.color.setAttrs(attrs)
 	return
 }
 
-func (this *Combo) build(preComboList ...*Combo) {
-	for _, combo := range preComboList {
-		if combo == nil {
-			continue
-		}
-
-		this.setPreCrAttrs(combo.attributes)
+func (c *Combo) linkTo(comboChan *Combo) {
+	if comboChan == nil {
+		return
 	}
+
+	c.color.linkTo(&comboChan.color)
 }
 
-func (this *Combo) String() string {
-	var buffer strings.Builder
+func (c *Combo) String() string {
+	var builder strings.Builder
 
-	this.setFormat(&buffer)
-	fmt.Fprintf(&buffer, "%v", this.data)
-	this.end(&buffer)
+	c.start(&builder)
+	defer c.end(&builder)
 
-	return buffer.String()
+	fmt.Fprintf(&builder, "%v", c.data)
+
+	return builder.String()
 }
