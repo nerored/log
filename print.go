@@ -1,6 +1,6 @@
 //
-// log/print.go
-// Copyright (c) 2019 nerored <nero_stellar@icloud.com>
+// print.go
+// Copyright (c) 2020 nerored <nero_stellar@icloud.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,16 +32,16 @@ import (
 )
 
 type repeater struct {
-	out1, out2 io.Writer
+	colored, nocolor *writerChan
 }
 
 func (r *repeater) Write(p []byte) (n int, err error) {
-	if r.out1 != nil {
-		n, err = r.out1.Write(p)
+	if r.colored != nil {
+		n, err = r.colored.Write(p)
 	}
 
-	if r.out2 != nil {
-		n, err = r.out2.Write(p)
+	if r.nocolor != nil {
+		n, err = r.nocolor.Write(p)
 	}
 
 	return
@@ -49,75 +49,50 @@ func (r *repeater) Write(p []byte) (n int, err error) {
 
 type printer struct {
 	timeFormat string
-	writerList []io.Writer
+
+	coloredIO []Writer
+	nocolorIO []Writer
 }
 
 var (
 	sharedPrinter printer
 )
 
-func init() {
-	SetTimeFormat("2006/01/02 15:04:05")
+func InitLog(timeFormat string, termColor bool) {
+	if len(timeFormat) > 0 {
+		SetTimeFormat(timeFormat)
+	} else {
+		SetTimeFormat("2006/01/02 15:04:05")
+	}
+
+	AddWriter(newTermWriter(termColor))
 }
 
 func SetTimeFormat(format string) {
 	sharedPrinter.timeFormat = format
 }
 
-func AddWriter(writers ...io.Writer) {
+func AddWriter(writers ...Writer) {
 	for _, w := range writers {
 		if w == nil {
 			continue
 		}
 
-		sharedPrinter.writerList = append(sharedPrinter.writerList, w)
-	}
-}
-
-func (this *printer) each(callback func(io.Writer)) {
-	if callback == nil || len(this.writerList) <= 0 {
-		return
-	}
-
-	for _, writer := range this.writerList {
-		callback(writer)
-	}
-}
-
-func (this *printer) Write(p []byte) (n int, err error) {
-	for _, writer := range this.writerList {
-		if writer == nil {
-			continue
+		if w.needColor() {
+			sharedPrinter.coloredIO = append(sharedPrinter.coloredIO, w)
+		} else {
+			sharedPrinter.nocolorIO = append(sharedPrinter.nocolorIO, w)
 		}
-
-		writer.Write(p)
 	}
-
-	return len(p), nil
 }
 
-func (this *printer) newRoot(logLevel LogLv) (root Combo) {
-	switch logLevel {
-	case LOG_LEVEL_DEBU:
-		root.setAttrs(FGC_LIGHTCYAN)
-	case LOG_LEVEL_INFO:
-		root.setAttrs(FGC_DEFAULT)
-	case LOG_LEVEL_TRAC:
-		root.setAttrs(FGC_LIGHTYELLOW, FMT_UNDERLINED)
-	case LOG_LEVEL_WARN:
-		root.setAttrs(FGC_YELLOW)
-	case LOG_LEVEL_ERRO:
-		root.setAttrs(FGC_RED)
-	case LOG_LEVEL_FATA:
-		root.setAttrs(FGC_LIGHTWHITE, BGC_RED)
-	}
-
-	return
-}
-
-func (this *printer) makeChan(root *Combo, args []interface{}) {
+func (this *printer) makeChan(root *Combo, needColor bool, args []interface{}) {
 	if root == nil || len(args) == 0 {
 		return
+	}
+
+	if needColor {
+		root.addColoredChange(1)
 	}
 
 	for _, arg := range args {
@@ -257,30 +232,27 @@ func (this *printer) printStackDep(writer io.Writer, flags PrintFlag) {
 	}
 }
 
-func (this *printer) print(stdIO io.Writer, logLevel LogLv, flags PrintFlag, format string, args ...interface{}) {
+func (this *printer) print(logLevel LogLv, flags PrintFlag, format string, args ...interface{}) {
 	if len(format) <= 0 && len(args) <= 0 {
 		return
 	}
 
-	majorW := repeater{
-		out1: stdIO,
-		out2: this,
-	}
+	majorW := getMajorChan(logLevel, this.coloredIO, this.nocolorIO)
+	defer freeMajorChan(&majorW)
 
-	root := this.newRoot(logLevel)
+	root := newRoot(logLevel)
 
-	this.makeChan(&root, args)
+	this.makeChan(&root, !majorW.colored.isEmpty(), args)
 
-	//write for color
-	root.begin(majorW.out1)
-	defer root.end(majorW.out1)
+	root.begin(majorW.colored)
+	defer root.end(majorW.colored)
 
 	this.printHeadInfo(&majorW, logLevel, flags)
 
-	//write for color
-	fmt.Fprintf(majorW.out1, format, args...)
-	//write without color
-	fmt.Fprintf(majorW.out2, format, args...)
+	fmt.Fprintf(majorW.colored, format, args...)
+	fmt.Fprintf(majorW.nocolor, format, args...)
+
+	freeCombos(args)
 
 	if !strings.HasSuffix(format, "\n") {
 		fmt.Fprintf(&majorW, "\n")

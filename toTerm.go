@@ -1,6 +1,6 @@
 //
-// log.go
-// Copyright (c) 2019 nerored <nero_stellar@icloud.com>
+// toTerm.go
+// Copyright (c) 2020 nerored <nero_stellar@icloud.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,30 +22,37 @@
 //
 package log
 
-func Debu(format string, args ...interface{}) {
-	sharedPrinter.print(LOG_LEVEL_DEBU, PRINT_DEFINE, format, args...)
+import (
+	"io"
+	"os"
+)
+
+type termWriter struct {
+	colored bool
 }
 
-func Trac(format string, args ...interface{}) {
-	sharedPrinter.print(LOG_LEVEL_TRAC, PRINT_UTRACE, format, args...)
+func newTermWriter(needColor bool) Writer {
+	return &termWriter{
+		colored: needColor,
+	}
 }
 
-func Info(format string, args ...interface{}) {
-	sharedPrinter.print(LOG_LEVEL_INFO, PRINT_DEFAULT, format, args...)
+func (t *termWriter) init() {
+
 }
 
-func Warn(format string, args ...interface{}) {
-	sharedPrinter.print(LOG_LEVEL_WARN, PRINT_DEFINE, format, args...)
+func (t *termWriter) exit() {
+
 }
 
-func Erro(format string, args ...interface{}) {
-	sharedPrinter.print(LOG_LEVEL_ERRO, PRINT_DEFINE, format, args...)
+func (t *termWriter) needColor() bool {
+	return t.colored
 }
 
-func Fata(format string, args ...interface{}) {
-	sharedPrinter.print(LOG_LEVEL_FATA, PRINT_DEFINE, format, args...)
+func (t *termWriter) info() io.Writer {
+	return os.Stdout
 }
 
-func Ulog(level LogLv, flags PrintFlag, format string, args ...interface{}) {
-	sharedPrinter.print(level, flags, format, args...)
+func (t *termWriter) erro() io.Writer {
+	return os.Stderr
 }

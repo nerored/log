@@ -24,16 +24,30 @@ package log
 
 import (
 	"fmt"
-	"strings"
+	"sync"
 )
 
 type Combo struct {
 	color
-	data interface{}
+	coloredCount int
+	data         interface{}
+}
+
+var comboPool = sync.Pool{
+	New: func() interface{} {
+		return new(Combo)
+	},
+}
+
+var builderPool = sync.Pool{
+	New: func() interface{} {
+		return new(Builder)
+	},
 }
 
 func NewCombo(data interface{}, attrs ...int) (c *Combo) {
-	c = new(Combo)
+	c = comboPool.Get().(*Combo)
+
 	c.data = data
 	c.color.setAttrs(attrs...)
 	return
@@ -45,19 +59,69 @@ func (c *Combo) linkTo(comboChan *Combo) {
 	}
 
 	c.color.linkTo(&comboChan.color)
+	c.addColoredChange(comboChan.coloredCount)
+}
+
+func (c *Combo) free() {
+	c.data = nil
+	c.coloredCount = 0
+	c.color.attributes = nil
+	c.color.colorChan = nil
+
+	comboPool.Put(c)
+}
+
+func (c *Combo) addColoredChange(delta int) {
+	c.coloredCount += delta
 }
 
 func (c *Combo) String() string {
-	//TODO::回收利用
-	writing := func() *strings.Builder {
-		builder := new(strings.Builder)
-		c.begin(builder)
-		defer c.end(builder)
+	builder := builderPool.Get().(*Builder)
+	defer builfer.free()
+
+	writing := func() {
+
+		if c.coloredCount > 0 {
+			c.begin(builder)
+			defer c.end(builder)
+			c.coloredCount--
+		}
 
 		fmt.Fprintf(builder, "%v", c.data)
-
-		return builder
 	}
 
 	return writing().String()
+}
+
+func freeCombos(args []interface{}) {
+	for _, arg := range args {
+		combo, ok := arg.(*Combo)
+
+		if !ok || combo == nil {
+			continue
+		}
+
+		combo.free()
+	}
+}
+
+//------ combo root maker
+
+func newRoot(logLevel LogLv) (root Combo) {
+	switch logLevel {
+	case LOG_LEVEL_DEBU:
+		root.setAttrs(FGC_LIGHTCYAN)
+	case LOG_LEVEL_INFO:
+		root.setAttrs(FGC_DEFAULT)
+	case LOG_LEVEL_TRAC:
+		root.setAttrs(FGC_LIGHTYELLOW, FMT_UNDERLINED)
+	case LOG_LEVEL_WARN:
+		root.setAttrs(FGC_YELLOW)
+	case LOG_LEVEL_ERRO:
+		root.setAttrs(FGC_RED)
+	case LOG_LEVEL_FATA:
+		root.setAttrs(FGC_LIGHTWHITE, BGC_RED)
+	}
+
+	return
 }
