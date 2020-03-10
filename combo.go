@@ -35,7 +35,7 @@ type Combo struct {
 func NewCombo(data interface{}, attrs ...int) (c *Combo) {
 	c = new(Combo)
 	c.data = data
-	c.color.setAttrs(attrs)
+	c.color.setAttrs(attrs...)
 	return
 }
 
@@ -48,9 +48,10 @@ func (c *Combo) linkTo(comboChan *Combo) {
 }
 
 func (c *Combo) String() string {
+	//回收利用
 	var builder strings.Builder
 
-	c.start(&builder)
+	c.begin(&builder)
 	defer c.end(&builder)
 
 	fmt.Fprintf(&builder, "%v", c.data)

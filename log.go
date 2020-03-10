@@ -29,11 +29,11 @@ func Debu(format string, args ...interface{}) {
 }
 
 func Trac(format string, args ...interface{}) {
-	sharedPrinter.print(os.Stdout, LOG_LEVEL_TRAC, PRINT_DEFINE, format, args...)
+	sharedPrinter.print(os.Stdout, LOG_LEVEL_TRAC, PRINT_UTRACE, format, args...)
 }
 
 func Info(format string, args ...interface{}) {
-	sharedPrinter.print(os.Stdout, LOG_LEVEL_INFO, PRINT_DEFINE, format, args...)
+	sharedPrinter.print(os.Stdout, LOG_LEVEL_INFO, PRINT_DEFAULT, format, args...)
 }
 
 func Warn(format string, args ...interface{}) {

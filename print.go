@@ -99,41 +99,36 @@ func (this *printer) Write(p []byte) (n int, err error) {
 func (this *printer) newRoot(logLevel LogLv) (root Combo) {
 	switch logLevel {
 	case LOG_LEVEL_DEBU:
-		root.setAttributes([]int{FGC_LIGHTCYAN})
+		root.setAttrs(FGC_LIGHTCYAN)
 	case LOG_LEVEL_INFO:
-		root.setAttributes([]int{FGC_DEFAULT})
+		root.setAttrs(FGC_DEFAULT)
 	case LOG_LEVEL_TRAC:
-		root.setAttributes([]int{FGC_LIGHTMAGENTA, FMT_UNDERLINED})
+		root.setAttrs(FGC_LIGHTYELLOW, FMT_UNDERLINED)
 	case LOG_LEVEL_WARN:
-		root.setAttributes([]int{FGC_YELLOW})
+		root.setAttrs(FGC_YELLOW)
 	case LOG_LEVEL_ERRO:
-		root.setAttributes([]int{FGC_RED})
+		root.setAttrs(FGC_RED)
 	case LOG_LEVEL_FATA:
-		root.setAttributes([]int{FGC_LIGHTWHITE, BGC_RED})
+		root.setAttrs(FGC_LIGHTWHITE, BGC_RED)
 	}
 
 	return
 }
 
-func (this *printer) doArgs(root *Combo, args []interface{}) (origin, nocolr []interface{}) {
-	if root == nil {
-		return args, nocolr
+func (this *printer) makeChan(root *Combo, args []interface{}) {
+	if root == nil || len(args) == 0 {
+		return
 	}
 
-	nocolr = make([]interface{}, len(args))
-	for i, arg := range args {
-		combo, ok := arg.(*Combo)
+	for _, arg := range args {
+		chanObj, ok := arg.(*Combo)
 
-		if !ok {
-			nocolr[i] = arg
+		if !ok || chanObj == nil {
 			continue
 		}
 
-		combo.build(root)
-		nocolr[i] = combo.data
+		chanObj.linkTo(root)
 	}
-
-	return args, nocolr
 }
 
 func (this *printer) printHeadInfo(writer io.Writer, logLevel LogLv, flags PrintFlag) {
@@ -240,7 +235,7 @@ func (this *printer) printStackDep(writer io.Writer, flags PrintFlag) {
 		return
 	}
 
-	fmt.Fprintf(writer, "\n-------- stack info\n")
+	fmt.Fprintf(writer, "-------- stack info\n")
 	for add := 0; add < depLen; add++ {
 		pc, fileName, line, ok := runtime.Caller(add + STD_STACK_DEPTH)
 
@@ -268,21 +263,22 @@ func (this *printer) print(stdIO io.Writer, logLevel LogLv, flags PrintFlag, for
 	}
 
 	majorW := repeater{
+
 		out1: stdIO,
 		out2: this,
 	}
 
 	root := this.newRoot(logLevel)
 
-	c, n := this.doArgs(&root, args)
+	this.makeChan(&root, args)
 
-	root.setFormat(majorW.out1)
+	root.begin(majorW.out1)
 	defer root.end(majorW.out1)
 
 	this.printHeadInfo(&majorW, logLevel, flags)
 
-	fmt.Fprintf(majorW.out1, format, c...)
-	fmt.Fprintf(majorW.out2, format, n...)
+	//	fmt.Fprintf(majorW.out2, format, args...)
+	fmt.Fprintf(majorW.out1, format, args...)
 
 	if !strings.HasSuffix(format, "\n") {
 		fmt.Fprintf(&majorW, "\n")

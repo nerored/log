@@ -80,11 +80,11 @@ type color struct {
 }
 
 func (c *color) isEmpty() bool {
-	return len(c.attributes) == 0 ||
-		c.colorChan == nil || c.colorChan.isEmpty()
+	return len(c.attributes) == 0 &&
+		(c.colorChan == nil || c.colorChan.isEmpty())
 }
 
-func (c *color) setAttrs(attrs []int) {
+func (c *color) setAttrs(attrs ...int) {
 	c.attributes = attrs
 }
 
@@ -93,17 +93,12 @@ func (c *color) linkTo(preChan *color) {
 }
 
 func (c *color) writeHead(writer io.Writer) {
-	if writer == nil {
+	if writer == nil || len(c.attributes) == 0 {
 		return
 	}
 
-	if c.colorChan != nil {
-		c.colorChan.writeHead(writer)
-	}
-
-	if len(c.attributes) == 0 {
-		return
-	}
+	fmt.Fprintf(writer, "\x1b[")
+	defer fmt.Fprintf(writer, "m")
 
 	fmt.Fprintf(writer, "%d", c.attributes[0])
 
@@ -113,20 +108,22 @@ func (c *color) writeHead(writer io.Writer) {
 }
 
 func (c *color) writeTail(writer io.Writer) {
-	if writer == nil {
+	if writer == nil || len(c.attributes) == 0 {
 		return
 	}
 
 	fmt.Fprintf(writer, "\x1b[%dm", FMT_RESET)
 }
 
-func (c *color) start(writer io.Writer) {
+func (c *color) begin(writer io.Writer) {
 	if writer == nil || c.isEmpty() {
 		return
 	}
 
-	fmt.Fprintf(writer, "\x1b[")
-	defer fmt.Fprintf(writer, "m")
+	//clear format before
+	if c.colorChan != nil {
+		c.colorChan.end(writer)
+	}
 
 	c.writeHead(writer)
 }
@@ -137,4 +134,9 @@ func (c *color) end(writer io.Writer) {
 	}
 
 	c.writeTail(writer)
+
+	//recover format before
+	if c.colorChan != nil {
+		c.colorChan.begin(writer)
+	}
 }
