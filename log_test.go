@@ -25,8 +25,6 @@ package log
 import "testing"
 
 func TestPrintInfo(t *testing.T) {
-	InitLog("", true)
-
 	Info("hero world this is %v -----l",
 		NewCombo("combo with red", FGC_RED))
 

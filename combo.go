@@ -24,6 +24,7 @@ package log
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -36,12 +37,6 @@ type Combo struct {
 var comboPool = sync.Pool{
 	New: func() interface{} {
 		return new(Combo)
-	},
-}
-
-var builderPool = sync.Pool{
-	New: func() interface{} {
-		return new(Builder)
 	},
 }
 
@@ -76,18 +71,14 @@ func (c *Combo) addColoredChange(delta int) {
 }
 
 func (c *Combo) String() string {
-	builder := builderPool.Get().(*Builder)
-	defer builfer.free()
+	writing := func() (buffer *strings.Builder) {
+		buffer = new(strings.Builder)
 
-	writing := func() {
+		c.begin(buffer)
+		defer c.end(buffer)
 
-		if c.coloredCount > 0 {
-			c.begin(builder)
-			defer c.end(builder)
-			c.coloredCount--
-		}
-
-		fmt.Fprintf(builder, "%v", c.data)
+		fmt.Fprintf(buffer, "%v", c.data)
+		return
 	}
 
 	return writing().String()
