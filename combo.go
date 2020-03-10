@@ -70,6 +70,26 @@ func (c *Combo) addColoredChange(delta int) {
 	c.coloredCount += delta
 }
 
+func (c *Combo) makeChan(needColor bool, args []interface{}) {
+	if len(args) == 0 {
+		return
+	}
+
+	if needColor {
+		c.addColoredChange(1)
+	}
+
+	for _, arg := range args {
+		chanObj, ok := arg.(*Combo)
+
+		if !ok || chanObj == nil {
+			continue
+		}
+
+		chanObj.linkTo(c)
+	}
+}
+
 func (c *Combo) String() string {
 	writing := func() (buffer *strings.Builder) {
 		buffer = new(strings.Builder)

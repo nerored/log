@@ -86,26 +86,6 @@ func AddWriter(writers ...Writer) {
 	}
 }
 
-func (this *printer) makeChan(root *Combo, needColor bool, args []interface{}) {
-	if root == nil || len(args) == 0 {
-		return
-	}
-
-	if needColor {
-		root.addColoredChange(1)
-	}
-
-	for _, arg := range args {
-		chanObj, ok := arg.(*Combo)
-
-		if !ok || chanObj == nil {
-			continue
-		}
-
-		chanObj.linkTo(root)
-	}
-}
-
 func (this *printer) printHeadInfo(writer io.Writer, logLevel LogLv, flags PrintFlag) {
 	if writer == nil {
 		return
@@ -242,7 +222,9 @@ func (this *printer) print(logLevel LogLv, flags PrintFlag, format string, args 
 
 	root := newRoot(logLevel)
 
-	this.makeChan(&root, !majorW.colored.isEmpty(), args)
+	if len(args) > 0 {
+		root.makeChan(!majorW.colored.isEmpty(), args)
+	}
 
 	root.begin(majorW.colored)
 	defer root.end(majorW.colored)
