@@ -263,7 +263,6 @@ func (this *printer) print(stdIO io.Writer, logLevel LogLv, flags PrintFlag, for
 	}
 
 	majorW := repeater{
-
 		out1: stdIO,
 		out2: this,
 	}
@@ -272,13 +271,16 @@ func (this *printer) print(stdIO io.Writer, logLevel LogLv, flags PrintFlag, for
 
 	this.makeChan(&root, args)
 
+	//write for color
 	root.begin(majorW.out1)
 	defer root.end(majorW.out1)
 
 	this.printHeadInfo(&majorW, logLevel, flags)
 
-	//	fmt.Fprintf(majorW.out2, format, args...)
+	//write for color
 	fmt.Fprintf(majorW.out1, format, args...)
+	//write without color
+	fmt.Fprintf(majorW.out2, format, args...)
 
 	if !strings.HasSuffix(format, "\n") {
 		fmt.Fprintf(&majorW, "\n")

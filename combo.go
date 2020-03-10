@@ -48,13 +48,16 @@ func (c *Combo) linkTo(comboChan *Combo) {
 }
 
 func (c *Combo) String() string {
-	//回收利用
-	var builder strings.Builder
+	//TODO::回收利用
+	writing := func() *strings.Builder {
+		builder := new(strings.Builder)
+		c.begin(builder)
+		defer c.end(builder)
 
-	c.begin(&builder)
-	defer c.end(&builder)
+		fmt.Fprintf(builder, "%v", c.data)
 
-	fmt.Fprintf(&builder, "%v", c.data)
+		return builder
+	}
 
-	return builder.String()
+	return writing().String()
 }
