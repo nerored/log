@@ -1,6 +1,6 @@
 //
-// toTerm.go
-// Copyright (c) 2020 nerored <nero_stellar@icloud.com>
+// log/combo_test.go
+// Copyright (c) 2019 nerored <nero_stellar@icloud.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,51 +23,22 @@
 package log
 
 import (
-	"bytes"
-	"io"
-	"os"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
-type termWriter struct {
-	infoBuffer *bytes.Buffer
-	erroBuffer *bytes.Buffer
-}
-
-func newTermWriter() Writer {
-	return &termWriter{
-		infoBuffer: new(bytes.Buffer),
-		erroBuffer: new(bytes.Buffer),
-	}
-}
-
-func (t *termWriter) init() {
-
-}
-
-func (t *termWriter) exit() {
-
-}
-
-func (t *termWriter) needColor() bool {
-	return true
-}
-
-func (t *termWriter) info() io.Writer {
-	return t.infoBuffer
-}
-
-func (t *termWriter) erro() io.Writer {
-	return t.erroBuffer
-}
-
-func (t *termWriter) reflush() {
-	if t.infoBuffer != nil && t.infoBuffer.Len() > 0 {
-		io.Copy(os.Stdout, t.infoBuffer)
-		t.infoBuffer.Reset()
-	}
-
-	if t.erroBuffer != nil && t.erroBuffer.Len() > 0 {
-		io.Copy(os.Stderr, t.erroBuffer)
-		t.erroBuffer.Reset()
-	}
+func TestTermLog(t *testing.T) {
+	Convey("cli term log test", t, func() {
+		Info("对酒当歌，人生几何")
+		Warn("譬如朝露，去日苦多")
+		Debu("慨当以慷，忧思难忘")
+		Erro("何以%v？唯%v杜康", NewCombo("解忧", FGC_BLUE), NewCombo("有", BGC_YELLOW, FGC_LIGHTMAGENTA))
+		Trac("%v子衿，悠悠我心", NewCombo("青青", FMT_BLINK))
+		Fata("但为君故，沉吟至今")
+		Info("呦呦%v之苹", NewCombo("鹿鸣，食野", FGC_MAGENTA, FMT_UNDERLINED))
+		Warn("我有嘉宾，鼓瑟吹笙")
+		Debu("明明如月，何时可掇")
+		Erro("忧从中来，不可断绝")
+	})
 }

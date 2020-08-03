@@ -31,6 +31,7 @@ type Writer interface {
 	init()
 	exit()
 	needColor() bool
+	reflush()
 	info() io.Writer
 	erro() io.Writer
 }

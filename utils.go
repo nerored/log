@@ -1,6 +1,6 @@
 //
-// toTerm.go
-// Copyright (c) 2020 nerored <nero_stellar@icloud.com>
+// log/utils.go
+// Copyright (c) 2019 nerored <nero_stellar@icloud.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,51 +23,28 @@
 package log
 
 import (
-	"bytes"
-	"io"
-	"os"
+	"runtime"
+	"strconv"
+	"strings"
 )
 
-type termWriter struct {
-	infoBuffer *bytes.Buffer
-	erroBuffer *bytes.Buffer
-}
-
-func newTermWriter() Writer {
-	return &termWriter{
-		infoBuffer: new(bytes.Buffer),
-		erroBuffer: new(bytes.Buffer),
-	}
-}
-
-func (t *termWriter) init() {
-
-}
-
-func (t *termWriter) exit() {
-
-}
-
-func (t *termWriter) needColor() bool {
-	return true
-}
-
-func (t *termWriter) info() io.Writer {
-	return t.infoBuffer
-}
-
-func (t *termWriter) erro() io.Writer {
-	return t.erroBuffer
-}
-
-func (t *termWriter) reflush() {
-	if t.infoBuffer != nil && t.infoBuffer.Len() > 0 {
-		io.Copy(os.Stdout, t.infoBuffer)
-		t.infoBuffer.Reset()
+func setLocationInfo(strBuilder *strings.Builder, dep int) {
+	if strBuilder == nil || dep <= 0 {
+		return
 	}
 
-	if t.erroBuffer != nil && t.erroBuffer.Len() > 0 {
-		io.Copy(os.Stderr, t.erroBuffer)
-		t.erroBuffer.Reset()
+	pc, file, line, ok := runtime.Caller(3 + dep)
+
+	if !ok {
+		return
+	}
+
+	strBuilder.WriteString(file)
+	strBuilder.WriteString(":")
+	strBuilder.WriteString(strconv.Itoa(line))
+	strBuilder.WriteString(" ")
+
+	if funcPC := runtime.FuncForPC(pc); funcPC != nil {
+		strBuilder.WriteString(funcPC.Name())
 	}
 }

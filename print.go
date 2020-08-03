@@ -47,51 +47,45 @@ func (r *repeater) Write(p []byte) (n int, err error) {
 	return
 }
 
+type Writenew func() Writer
+
 type printer struct {
 	timeFormat string
-
-	coloredIO []Writer
-	nocolorIO []Writer
+	bufcreator []Writenew
 }
 
 var (
 	sharedPrinter printer
 )
 
-func InitLog(timeFormat string, termColor bool) {
+func InitLog(timeFormat string) {
 	if len(timeFormat) > 0 {
 		SetTimeFormat(timeFormat)
 	} else {
 		SetTimeFormat("2006/01/02 15:04:05")
 	}
 
-	AddWriter(newTermWriter(termColor))
+	AddBufCreator(newTermWriter)
 }
 
 func SetTimeFormat(format string) {
 	sharedPrinter.timeFormat = format
 }
 
-func AddWriter(writers ...Writer) {
-	for _, w := range writers {
-		if w == nil {
-			continue
-		}
-
-		if w.needColor() {
-			sharedPrinter.coloredIO = append(sharedPrinter.coloredIO, w)
-		} else {
-			sharedPrinter.nocolorIO = append(sharedPrinter.nocolorIO, w)
-		}
+func AddBufCreator(f ...Writenew) {
+	if len(f) == 0 {
+		return
 	}
+
+	sharedPrinter.bufcreator = append(sharedPrinter.bufcreator, f...)
 }
 
-func (this *printer) printHeadInfo(writer io.Writer, logLevel LogLv, flags PrintFlag) {
+func (p *printer) printHeadInfo(writer io.Writer, logLevel LogLv, flags PrintFlag) {
 	if writer == nil {
 		return
 	}
 
-	this.printTimeInfo(writer, flags)
+	p.printTimeInfo(writer, flags)
 
 	var prefix, suffix string
 
@@ -126,24 +120,24 @@ func (this *printer) printHeadInfo(writer io.Writer, logLevel LogLv, flags Print
 	if len(prefix) > 0 {
 		fmt.Fprintf(writer, prefix)
 	}
-	this.printFileInfo(writer, flags)
-	this.printFuncName(writer, flags)
+	p.printFileInfo(writer, flags)
+	p.printFuncName(writer, flags)
 	if len(suffix) > 0 {
 		fmt.Fprintf(writer, suffix)
 	}
 }
 
-func (this *printer) printTimeInfo(writer io.Writer, flags PrintFlag) {
+func (p *printer) printTimeInfo(writer io.Writer, flags PrintFlag) {
 	if writer == nil || flags&PRINT_TIMELAB <= 0 {
 		return
 	}
 
-	fmt.Fprintf(writer, time.Now().Format(this.timeFormat))
+	fmt.Fprintf(writer, time.Now().Format(p.timeFormat))
 }
 
 const LOC_STACK_DEPTH = 4
 
-func (this *printer) printFileInfo(writer io.Writer, flags PrintFlag) {
+func (p *printer) printFileInfo(writer io.Writer, flags PrintFlag) {
 	if writer == nil || flags&PRINT_FILELOC <= 0 {
 		return
 	}
@@ -160,7 +154,7 @@ func (this *printer) printFileInfo(writer io.Writer, flags PrintFlag) {
 	fmt.Fprintf(writer, strconv.Itoa(line))
 }
 
-func (this *printer) printFuncName(writer io.Writer, flags PrintFlag) {
+func (p *printer) printFuncName(writer io.Writer, flags PrintFlag) {
 	if writer == nil || flags&PRINT_FILELOC <= 0 {
 		return
 	}
@@ -179,7 +173,7 @@ func (this *printer) printFuncName(writer io.Writer, flags PrintFlag) {
 
 const STD_STACK_DEPTH = 3
 
-func (this *printer) printStackDep(writer io.Writer, flags PrintFlag) {
+func (p *printer) printStackDep(writer io.Writer, flags PrintFlag) {
 	if writer == nil || flags&PRINT_STACKIN <= 0 {
 		return
 	}
@@ -212,12 +206,55 @@ func (this *printer) printStackDep(writer io.Writer, flags PrintFlag) {
 	}
 }
 
-func (this *printer) print(logLevel LogLv, flags PrintFlag, format string, args ...interface{}) {
+func (p *printer) reflush(coloredIO, nocolorIO []Writer) {
+	for _, writer := range coloredIO {
+		if writer == nil {
+			continue
+		}
+
+		writer.reflush()
+	}
+
+	for _, writer := range nocolorIO {
+		if writer == nil {
+			continue
+		}
+
+		writer.reflush()
+	}
+}
+
+func (p *printer) newIOList() (coloredIO, nocolorIO []Writer) {
+	for _, creator := range p.bufcreator {
+		if creator == nil {
+			continue
+		}
+
+		writer := creator()
+
+		if writer == nil {
+			continue
+		}
+
+		if writer.needColor() {
+			coloredIO = append(coloredIO, writer)
+		} else {
+			nocolorIO = append(nocolorIO, writer)
+		}
+	}
+
+	return
+}
+
+func (p *printer) print(logLevel LogLv, flags PrintFlag, format string, args ...interface{}) {
 	if len(format) <= 0 && len(args) <= 0 {
 		return
 	}
 
-	majorW := getMajorChan(logLevel, this.coloredIO, this.nocolorIO)
+	coloredIO, nocolorIO := p.newIOList()
+	defer p.reflush(coloredIO, nocolorIO)
+
+	majorW := getMajorChan(logLevel, coloredIO, nocolorIO)
 	defer freeMajorChan(&majorW)
 
 	root := newRoot(logLevel)
@@ -229,7 +266,7 @@ func (this *printer) print(logLevel LogLv, flags PrintFlag, format string, args 
 	root.begin(majorW.colored)
 	defer root.end(majorW.colored)
 
-	this.printHeadInfo(&majorW, logLevel, flags)
+	p.printHeadInfo(&majorW, logLevel, flags)
 
 	fmt.Fprintf(majorW.colored, format, args...)
 	fmt.Fprintf(majorW.nocolor, format, args...)
@@ -240,5 +277,5 @@ func (this *printer) print(logLevel LogLv, flags PrintFlag, format string, args 
 		fmt.Fprintf(&majorW, "\n")
 	}
 
-	this.printStackDep(&majorW, flags)
+	p.printStackDep(&majorW, flags)
 }

@@ -28,7 +28,7 @@ import (
 )
 
 func init() {
-	InitLog("", true)
+	InitLog("")
 }
 
 func BenchmarkLogNoComboInfo(b *testing.B) {

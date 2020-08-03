@@ -1,13 +1,6 @@
-package log
-
-import (
-	"strings"
-	"testing"
-)
-
 //
-// color_test.go
-// Copyright (c) 2020 nerored <nero_stellar@icloud.com>
+// log/color_test.go
+// Copyright (c) 2019 nerored <nero_stellar@icloud.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,50 +20,104 @@ import (
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
+package log
 
-func TestSigleColor(t *testing.T) {
-	exs := [][]int{
-		{},
-		{FMT_BOLD},
-		{FGC_BLACK},
-		{BGC_BLACK},
-		{FMT_BLINK, FGC_BLUE},
-		{BGC_CYAN, FGC_BLUE},
-	}
+import (
+	"fmt"
+	"strings"
+	"testing"
 
-	out := []string{
-		"",
-	}
+	. "github.com/smartystreets/goconvey/convey"
+)
 
-	for i, ex := range exs {
-		if i >= len(out) {
-			t.Errorf("[color] no output ex %v", i)
-			continue
+func TestColorSet(t *testing.T) {
+	Convey("cli fg color test", t, func() {
+		for _, colorAttr := range []int{
+			FGC_DEFAULT,
+			FGC_BLACK,
+			FGC_RED,
+			FGC_GREEN,
+			FGC_YELLOW,
+			FGC_BLUE,
+			FGC_MAGENTA,
+			FGC_CYAN,
+			FGC_LIGHTGREY,
+			FGC_DARKGREY,
+			FGC_LIGHTRED,
+			FGC_LIGHTGREEN,
+			FGC_LIGHTYELLOW,
+			FGC_LIGHTBLUE,
+			FGC_LIGHTMAGENTA,
+			FGC_LIGHTCYAN,
+			FGC_LIGHTWHITE,
+		} {
+			buffer := new(strings.Builder)
+			So(buffer, ShouldNotBeNil)
+			obj := new(color)
+			obj.setAttrs(colorAttr)
+			So(obj, ShouldNotBeNil)
+			obj.begin(buffer)
+			buffer.WriteString("吾有一言。曰「問天地好在」。")
+			obj.end(buffer)
+			fmt.Println(buffer.String())
 		}
+	})
+}
 
-		var c color
-		c.setAttrs(ex...)
-
-		if len(ex) != len(c.attributes) {
-			t.Errorf("[color] setAttrs test failed ex %v", 1)
-			continue
+func TestFormatSet(t *testing.T) {
+	Convey("cli format output test", t, func() {
+		for _, colorAttr := range []int{
+			FMT_BOLD,
+			FMT_DIM,
+			FMT_UNDERLINED,
+			FMT_BLINK,
+			FMT_MINVERTED,
+			FMT_HIDDEN,
+		} {
+			buffer := new(strings.Builder)
+			So(buffer, ShouldNotBeNil)
+			obj := new(color)
+			obj.setAttrs(colorAttr)
+			So(obj, ShouldNotBeNil)
+			obj.begin(buffer)
+			buffer.WriteString("落霞与孤鹜齐飞，秋水共长天一色")
+			obj.end(buffer)
+			fmt.Println(buffer.String())
 		}
+	})
+}
 
-		if len(ex) > 0 && c.isEmpty() {
-			t.Errorf("[color] isEmpty test failed ex %v", i)
-			continue
+func TestBGColorSet(t *testing.T) {
+	Convey("cli bg color test", t, func() {
+		for _, colorAttr := range []int{
+			BGC_DEFAULT,
+			BGC_BLACK,
+			BGC_RED,
+			BGC_GREEN,
+			BGC_YELLOW,
+			BGC_BLUE,
+			BGC_MAGENTA,
+			BGC_CYAN,
+			BGC_LIGHTGREY,
+			BGC_DARKGREY,
+			BGC_LIGHTRED,
+			BGC_LIGHTGREEN,
+			BGC_LIGHTYELLOW,
+			BGC_LIGHTBLUE,
+			BGC_LIGHTMAGENTA,
+			BGC_LIGHTCYAN,
+			BGC_LIGHTWHITE,
+		} {
+
+			buffer := new(strings.Builder)
+			So(buffer, ShouldNotBeNil)
+			obj := new(color)
+			obj.setAttrs(colorAttr)
+			So(obj, ShouldNotBeNil)
+			obj.begin(buffer)
+			buffer.WriteString("仿佛兮若轻云之蔽月,飘飘兮若流风之回雪")
+			obj.end(buffer)
+			fmt.Println(buffer.String())
 		}
-
-		var builder strings.Builder
-
-		func() {
-			c.begin(&builder)
-			defer c.end(&builder)
-		}()
-
-		if builder.String() != out[i] {
-			t.Errorf("[color] buildcolor failed ex %v", i)
-			continue
-		}
-	}
+	})
 }

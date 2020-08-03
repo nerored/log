@@ -23,7 +23,7 @@
 package log
 
 func Debu(format string, args ...interface{}) {
-	sharedPrinter.print(LOG_LEVEL_DEBU, PRINT_DEFINE, format, args...)
+	sharedPrinter.print(LOG_LEVEL_DEBU, PRINT_DEBUG, format, args...)
 }
 
 func Trac(format string, args ...interface{}) {

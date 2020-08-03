@@ -1,6 +1,6 @@
 //
-// toTerm.go
-// Copyright (c) 2020 nerored <nero_stellar@icloud.com>
+// bench_test.go
+// Copyright (c) 2019 nerored <nero_stellar@icloud.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,51 +23,11 @@
 package log
 
 import (
-	"bytes"
-	"io"
-	"os"
+	"testing"
 )
 
-type termWriter struct {
-	infoBuffer *bytes.Buffer
-	erroBuffer *bytes.Buffer
-}
-
-func newTermWriter() Writer {
-	return &termWriter{
-		infoBuffer: new(bytes.Buffer),
-		erroBuffer: new(bytes.Buffer),
-	}
-}
-
-func (t *termWriter) init() {
-
-}
-
-func (t *termWriter) exit() {
-
-}
-
-func (t *termWriter) needColor() bool {
-	return true
-}
-
-func (t *termWriter) info() io.Writer {
-	return t.infoBuffer
-}
-
-func (t *termWriter) erro() io.Writer {
-	return t.erroBuffer
-}
-
-func (t *termWriter) reflush() {
-	if t.infoBuffer != nil && t.infoBuffer.Len() > 0 {
-		io.Copy(os.Stdout, t.infoBuffer)
-		t.infoBuffer.Reset()
-	}
-
-	if t.erroBuffer != nil && t.erroBuffer.Len() > 0 {
-		io.Copy(os.Stderr, t.erroBuffer)
-		t.erroBuffer.Reset()
+func BenchmarkInfo(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Info("log test asdasdasd %v", "asdadk")
 	}
 }
